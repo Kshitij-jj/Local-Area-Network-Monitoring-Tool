@@ -3,7 +3,9 @@
 #define SCANNER_H
 
 #include "common.h"
-
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 typedef enum {
      PORT_ERROR = -1,
