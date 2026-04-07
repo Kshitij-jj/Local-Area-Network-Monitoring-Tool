@@ -7,6 +7,15 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define MAX_PORT 1024
+typedef struct Port {
+    int port;
+    int status;
+} Port_var;
+typedef struct Ip{
+    char ip_addr[16];
+     Port_var *ports;
+} Ip_var;
 
 
 #endif

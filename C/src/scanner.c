@@ -34,9 +34,10 @@ PortStatus scan_port(const char *ip, int port){
     } else {
         if(errno == ECONNREFUSED){
             status = PORT_CLOSED;
-        } else if(errno == ETIMEDOUT || errno == EHOSTUNREACH || errno == ENETUNREACH){
+        } else if(errno == ETIMEDOUT ||errno == EINPROGRESS || errno == EHOSTUNREACH || errno == ENETUNREACH){
             status = PORT_FILTERED;
         } else {
+		printf("%d: %s\n",errno,strerror(errno));
             perror("Connect failed");
             status = PORT_ERROR;
         }
