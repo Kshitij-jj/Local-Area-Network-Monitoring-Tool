@@ -1,36 +1,8 @@
 #include "common.h"
 #include "scanner.h"
 #include "input.h"
-
-void init_port(Ip_var *ip){
-	(*ip).ports = (Port_var*) malloc(sizeof(Port_var)*MAX_PORT);
-}
-void free_port(Ip_var *ip){
-    free(ip->ports);
-    ip->ports = NULL;
-}
-void free_ip_list(Ip_var *ip){
-    free(ip);
-}
-void print_status(int port, PortStatus status){
-    switch (status)
-        {
-        case PORT_OPEN:
-            printf("\t\t%d\t\tOpen\n",port);
-            break;
-        case PORT_CLOSED:
-            printf("\t\t%d\t\tCLOSED\n",port);
-            break;
-        case PORT_FILTERED:
-            printf("\t\t%d\t\tFILTERED\n",port);
-            break;
-        default:
-            printf("\t\t%d\t\tERROR\n",port);
-            break;
-        
-        }
-    
-}
+#include "helper.h"
+#include "output.h"
 // void test_scanning(const char *ip, int ports[], int port_size){
 //     int i;
 //     PortStatus status;
@@ -45,36 +17,35 @@ if(argc<2){
     fputs("Usage: scan <target>",stderr);
     exit(EXIT_FAILURE);
     }
-char *target = argv[1];
-int count=0,i;
-Ip_var *ip_list = get_ip(target, &count);
+int count,i;
+Target * targets = get_targets(argc, argv, &count);
 
-for(i=0;i<count;i++){
-    printf("IP Adress: %s\n",ip_list[i].ip_addr);
-}
-/*
-int curnt_port;
-for( curnt_port=1; curnt_port<=MAX_PORT; curnt_port++){
-    ip.ports[curnt_port-1].port=curnt_port;
-    ip.ports[curnt_port-1].status = scan_port(ip.ip_addr, curnt_port);
-}
-
-// output module
-printf("\t\tPorts\t\tStatus\n");
-for(curnt_port=0 ;curnt_port<MAX_PORT; curnt_port++){
-    PortStatus stat = ip.ports[curnt_port].status;
-    
-        print_status(curnt_port+1,stat);
-    
-
-}*/
-for(i=0;i<count;i++){
-init_port(&ip_list[i]);
-}
-for(i=0;i<count;i++){
-free_port(&ip_list[i]);
-}
-free_ip_list(ip_list);
+//Scanning
+int j,cur_port;
+printf("Proceding to scanning: \n");
+for(i=0; i<count; i++)
+    {
+         int ip_count_tmp = (targets+i)->ip_count;
+         int port_count_tmp = (targets+i)->port_count;  
+         for(j=0; j < ip_count_tmp ; j++ )
+            {   
+                char *ipaddr = (targets+i)->ip_addrs[j].ip;
+                
+                for(cur_port=1; cur_port<=port_count_tmp; cur_port++)
+                    {   
+                        int index = cur_port - 1;
+                        PortStatus stat;
+                        (targets+i)->ports[index].port = cur_port; // seems not worth in this case but later
+                        stat = scan_port(ipaddr, cur_port);
+                        (targets+i)->ports[index].status=stat;
+                        float progress = (float)cur_port / (float)port_count_tmp * 100;
+                        printf("Done: %.0f%\r",progress);
+                        fflush(stdout);
+                    }
+            }
+    }
+print(targets, count);
+cleanup(targets,count);
 printf("Program Exited\n");
 return 0;
  }

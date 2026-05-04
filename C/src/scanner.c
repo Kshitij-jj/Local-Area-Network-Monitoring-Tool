@@ -1,7 +1,5 @@
 #include "scanner.h"
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+
 
 PortStatus scan_port(const char *ip, int port){
     PortStatus status = PORT_ERROR;

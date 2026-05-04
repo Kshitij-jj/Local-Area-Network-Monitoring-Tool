@@ -4,7 +4,7 @@
 #include "common.h"
 #include <netdb.h>
 
-
+Target* get_targets(int , char** , int* );
 Ip_var* get_ip(const char*, int *); 
 
 #endif
