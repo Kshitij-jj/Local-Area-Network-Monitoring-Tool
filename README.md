@@ -22,10 +22,11 @@ This project was built to understand the fundamentals of:
 ![Open Ports](2026-05-06_16-17.png)
 
 **Closed Ports**
-![Closed Ports](2026-05-06_16-18.png)
+![Multiple IPs](2026-05-06_16-19.png)
+
 
 **Multiple Targets**
-![Multiple IPs](2026-05-06_16-19.png)
+![Closed Ports](2026-05-06_16-18.png)
 
 ---
 
