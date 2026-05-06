@@ -21,10 +21,6 @@ This project was built to understand the fundamentals of:
 **Open Ports Detected**
 ![Open Ports](2026-05-06_16-17.png)
 
-**Closed Ports**
-![Multiple IPs](2026-05-06_16-19.png)
-
-
 **Multiple Targets**
 ![Closed Ports](2026-05-06_16-18.png)
 
