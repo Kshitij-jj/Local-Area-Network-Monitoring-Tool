@@ -29,12 +29,12 @@ void print(Target* targets, int count){
                 char *ipaddr = (targets+i)->ip_addrs[j].ip;
                 printf("Scan Report For IP: %s\n",ipaddr);
                 printf("\t\tPORT\t\tSTATUS\n");
-                for(cur_port=1; cur_port<=port_count_tmp; cur_port++)
+                for(cur_port=0; cur_port<port_count_tmp; cur_port++)
                     {   
-                        int index = cur_port - 1;
-                        PortStatus stat= targets[i].ports[index].status;
+                      
+                        PortStatus stat= targets[i].ports[cur_port].status;
                         if( stat == PORT_OPEN || stat == PORT_FILTERED )
-                        print_status(cur_port,stat);
+                        print_status(targets[i].ports[cur_port].port,stat);
                         
                     }
             }

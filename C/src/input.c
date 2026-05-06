@@ -1,8 +1,20 @@
 #include "input.h"
 #include "scanner.h"
+#include "helper.h"
 Target* get_targets(int argc, char *argv[], int *target_count){
+    int count;
     
-    *target_count = argc - 1;
+    PortRange Port;
+    count = find_flag(argc,argv,"-p");
+    if(count != -1 ){
+        *target_count = count - 1;
+       Port = get_ports(count,argv);
+    } else {
+        *target_count = argc - 1;
+        Port.ports=NULL;
+        Port.count=MAX_PORT;
+    }
+    
     int i = *target_count;
 
     Target *tmp = malloc( i *sizeof(Target) );
@@ -14,27 +26,30 @@ Target* get_targets(int argc, char *argv[], int *target_count){
    while(j<i){
     (tmp+j)->ip_addrs = get_ip(argv[j+1],&((tmp+j)->ip_count));
     strcpy(((tmp+j)->hostname),argv[j+1]);
-    (tmp+j)->port_count = MAX_PORT; //for now
+    (tmp+j)->port_count = Port.count; 
+    
     (tmp+j)->ports = malloc( ((tmp+j)->port_count) * sizeof(Port_var));
     
     if((tmp+j)->ports==NULL){
         perror("Allocation Failed: \n");
+        exit(EXIT_FAILURE);
     }
+    init_ports(tmp+j,Port);
     ++j;
    }
+   free(Port.ports);
     return tmp;
 }
 
 Ip_var* get_ip(const char* target, int *ip_count) {
     struct addrinfo hints, *res, *tmp;
-    char ipstr[INET_ADDRSTRLEN];
     int status, count = 0;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;       
     hints.ai_socktype = SOCK_STREAM;
 
-    status = getaddrinfo(target, NULL, &hints, &res);
+   status = getaddrinfo(target, NULL, &hints, &res);
     if (status != 0) {
         printf("Error: %s\n", gai_strerror(status));
         exit(1);
