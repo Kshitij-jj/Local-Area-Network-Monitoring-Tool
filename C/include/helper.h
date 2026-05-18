@@ -1,13 +1,16 @@
-#ifndef CLEANUP_H
-#define CLEANUP_H
- 
+#ifndef HELPER_H
+#define HELPER_H
+
 #include "common.h"
+
 typedef struct {
     int *ports;
-    int count;
+    int  count;
 } PortRange;
-PortRange get_ports(int , char **);
-int find_flag(int , char **, const char *);
-void init_ports(Target*, PortRange);
-void cleanup(Target*,int);
+
+int      find_flag(int, char **, const char *);
+PortRange get_ports(int, char **);
+void     init_ports(Ip_var *, PortRange);
+void     cleanup(Target *, int);
+
 #endif
