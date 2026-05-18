@@ -6,10 +6,12 @@
 
 ## About
 
-CRecon is a lightweight TCP port scanner written in pure C. It resolves hostnames via DNS, connects to target ports using raw sockets, and classifies each port as Open, Closed, or Filtered — similar to how tools like `nmap` work under the hood.
+CRecon is a lightweight TCP port scanner written in pure C. It resolves hostnames via DNS, connects to target ports using non-blocking sockets, and classifies each port as Open, Closed, or Filtered — similar to how tools like `nmap` work under the hood.
 
 This project was built to understand the fundamentals of:
-- Raw socket programming
+
+- Raw socket programming with non-blocking I/O
+- Multiplexing connections via `select()`
 - DNS resolution with `getaddrinfo`
 - Network reconnaissance techniques
 - Memory management in C
@@ -19,10 +21,10 @@ This project was built to understand the fundamentals of:
 ## Screenshots
 
 **Open Ports Detected**
-![Open Ports](2026-05-06_16-17.png)
+![Open Ports](C/outputs/2026-05-06_16-17.png)
 
 **Multiple Targets**
-![Closed Ports](2026-05-06_16-18.png)
+![Multiple Targets](C/outputs/2026-05-06_16-18.png)
 
 ---
 
@@ -30,6 +32,7 @@ This project was built to understand the fundamentals of:
 
 - Scan single or multiple targets (IP or hostname)
 - Resolves hostnames to all mapped IPs automatically
+- Non-blocking sockets with `select()` — scans all ports simultaneously
 - Classifies ports as `OPEN`, `CLOSED`, or `FILTERED`
 - Configurable port ranges via `-p` flag (default: top 1024)
 - Clean scan report output per IP
@@ -74,7 +77,7 @@ make
 C/
 ├── src/
 │   ├── main.c        # Entry point, scan loop
-│   ├── scanner.c     # TCP connect scan logic
+│   ├── scanner.c     # Non-blocking TCP scan with select()
 │   ├── input.c       # Argument parsing, DNS resolution
 │   ├── output.c      # Scan report printing
 │   └── helper.c      # Memory cleanup, port utilities
@@ -91,17 +94,44 @@ C/
 
 ## How It Works
 
-CRecon uses **TCP Connect Scanning** — the same technique used by nmap's `-sT` flag:
+### Why Sequential Scanning Is Slow
 
-1. Creates a TCP socket per port
-2. Attempts `connect()` to target IP:port
-3. Classifies result:
-   - Connection success → `OPEN`
-   - `ECONNREFUSED` → `CLOSED`
-   - `ETIMEDOUT` / `EHOSTUNREACH` → `FILTERED`
+The naive approach scans one port at a time:
 
 ```
-Target → DNS Resolution → IP List → TCP Connect per Port → Report
+connect(port 1) → wait 1s → result
+connect(port 2) → wait 1s → result
+...
+connect(port 1024) → wait 1s → result
+```
+
+Scanning 1024 ports with a 1 second timeout = **~17 minutes** per target. Every port blocks the thread until the connection succeeds or times out.
+
+### CRecon's Approach — Non-blocking + `select()`
+
+CRecon uses non-blocking sockets and `select()` to scan all ports simultaneously:
+
+```
+Create 1024 non-blocking sockets
+connect() all at once → returns immediately (EINPROGRESS)
+select() waits up to 1s for ANY socket to be ready
+Check each ready socket → classify result
+Total time: ~1 second regardless of port count
+```
+
+**Step by step:**
+
+1. `fcntl(sockfd, F_SETFL, O_NONBLOCK)` — makes socket non-blocking
+2. `connect()` returns immediately with `EINPROGRESS` instead of blocking
+3. `select()` on `writefds` — sleeps until one or more connections complete
+4. `getsockopt(SO_ERROR)` — checks if connection succeeded or failed
+5. Classify:
+   - `SO_ERROR == 0` → `OPEN`
+   - `SO_ERROR == ECONNREFUSED` → `CLOSED`
+   - Not ready after timeout → `FILTERED`
+
+```
+All ports → non-blocking connect() → select() → getsockopt() → Report
 ```
 
 ---
@@ -111,9 +141,9 @@ Target → DNS Resolution → IP List → TCP Connect per Port → Report
 - [x] Single target scanning
 - [x] Multiple target scanning
 - [x] Custom port ranges via `-p` flag
-- [ ] HTML report output
+- [x] Non-blocking sockets with `select()`
+- [ ] HTML report output via `-o` flag
 - [ ] Multithreaded scanning (thread pool)
-- [ ] Non-blocking sockets
 - [ ] Banner grabbing (service detection)
 - [ ] UDP scan support
 - [ ] OS fingerprinting
@@ -132,7 +162,7 @@ Target → DNS Resolution → IP List → TCP Connect per Port → Report
 
 **Kshitij** — Built as a learning project while diving deep into cybersecurity, network programming, and C systems development.
 
-> *"To understand security tools, you must build them yourself."*
+> _"To understand security tools, you must build them yourself."_
 
 ---
 
