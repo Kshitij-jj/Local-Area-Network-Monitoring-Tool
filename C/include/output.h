@@ -1,7 +1,8 @@
 #ifndef OUTPUT_H
 #define OUTPUT_H
- 
+#include <time.h>
 #include "common.h"
-void print(Target*, int);
-void print_status(int, PortStatus);
+void report(Target*, int, char);
+void report_text(Target*, int);
+void report_html(Target*, int);
 #endif

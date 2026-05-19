@@ -6,11 +6,13 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fputs("Usage: crecon <target> [target2 ...] [-p port|range]\n", stderr);
+        fputs("Usage: crecon <target> [target2 ...] [-p port|range] [-o h|t|..]\n", stderr);
         exit(EXIT_FAILURE);
     }
 
     int count, i, j;
+    char format;
+    format = get_format(argc, argv);
     Target *targets = get_targets(argc, argv, &count);
 
     printf("Proceeding to scan...\n");
@@ -23,7 +25,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    print(targets, count);
+    report(targets, count, format);
     cleanup(targets, count);
     printf("Program Exited\n");
     return 0;

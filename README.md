@@ -6,54 +6,113 @@
 
 ## About
 
-CRecon is a lightweight TCP port scanner written in pure C. It resolves hostnames via DNS, connects to target ports using non-blocking sockets, and classifies each port as Open, Closed, or Filtered — similar to how tools like `nmap` work under the hood.
+CRecon is a lightweight TCP port scanner written in pure C. It resolves hostnames via DNS, connects to target ports using non-blocking sockets, and classifies each port as `OPEN`, `CLOSED`, or `FILTERED` — similar to how tools like `nmap` work internally.
 
-This project was built to understand the fundamentals of:
+The project was built to deeply understand:
 
-- Raw socket programming with non-blocking I/O
-- Multiplexing connections via `select()`
-- DNS resolution with `getaddrinfo`
-- Network reconnaissance techniques
-- Memory management in C
+- TCP socket programming
+- Non-blocking network I/O
+- Connection multiplexing with `select()`
+- DNS resolution with `getaddrinfo()`
+- Network reconnaissance concepts
+- Systems programming and memory management in C
 
 ---
 
 ## Screenshots
 
-**Open Ports Detected**
+### Open Ports Detected
+
 ![Open Ports](C/outputs/2026-05-06_16-17.png)
 
-**Multiple Targets**
+### Multiple Targets
+
 ![Multiple Targets](C/outputs/2026-05-06_16-18.png)
+
+### HTML Report Output
+
+![HTML Output](C/outputs/html_report.png)
 
 ---
 
 ## Features
 
-- Scan single or multiple targets (IP or hostname)
-- Resolves hostnames to all mapped IPs automatically
-- Non-blocking sockets with `select()` — scans all ports simultaneously
-- Classifies ports as `OPEN`, `CLOSED`, or `FILTERED`
-- Configurable port ranges via `-p` flag (default: top 1024)
-- Clean scan report output per IP
+- Scan single or multiple targets
+- Supports both IP addresses and hostnames
+- Automatically resolves hostnames to all associated IPs
+- Non-blocking socket scanning using `select()`
+- Simultaneous scanning of all ports
+- Port classification:
+  - `OPEN`
+  - `CLOSED`
+  - `FILTERED`
+- Custom port selection using `-p`
+- Multiple output formats:
+  - Terminal text output
+  - HTML report generation
+- Timestamped HTML reports
 
 ---
 
 ## Usage
 
+### Single Target
+
 ```bash
-# Single target
 ./crecon 192.168.1.1
+```
 
-# Multiple targets
+### Multiple Targets
+
+```bash
 ./crecon google.com 192.168.1.1
+```
 
-# Specific ports
+### Specific Ports
+
+```bash
 ./crecon 192.168.1.1 -p 80 443
+```
 
-# Port range
+### Port Range
+
+```bash
 ./crecon 192.168.1.1 -p 1-1024
 ```
+
+---
+
+## Output Options
+
+### Plain Terminal Output
+
+```bash
+./crecon 192.168.1.1 -o t
+```
+
+Displays scan results directly in the terminal using a clean text-based format.
+
+---
+
+### HTML Report Output
+
+```bash
+./crecon 192.168.1.1 -o h
+```
+
+Generates a timestamped HTML report:
+
+```bash
+crecon_YYYY-MM-DD_HH-MM-SS.html
+```
+
+Example:
+
+```bash
+crecon_2026-05-19_21-34-11.html
+```
+
+The report is automatically saved in the current working directory and can be opened in any web browser.
 
 ---
 
@@ -65,28 +124,40 @@ cd C
 make
 ```
 
-**Dependencies:** None — pure POSIX C, standard libraries only.
+### Dependencies
 
-**Tested on:** Linux (Kali)
+None — built entirely with:
+
+- POSIX sockets
+- Standard C libraries
+- Linux networking APIs
+
+### Tested On
+
+- Kali Linux
+- Ubuntu
 
 ---
 
 ## Project Structure
 
-```
+```text
 C/
 ├── src/
-│   ├── main.c        # Entry point, scan loop
-│   ├── scanner.c     # Non-blocking TCP scan with select()
-│   ├── input.c       # Argument parsing, DNS resolution
-│   ├── output.c      # Scan report printing
-│   └── helper.c      # Memory cleanup, port utilities
+│   ├── main.c        # Entry point and scan orchestration
+│   ├── scanner.c     # Non-blocking TCP scanning engine
+│   ├── input.c       # Argument parsing and DNS resolution
+│   ├── output.c      # Terminal and HTML output generation
+│   └── helper.c      # Utility helpers and memory cleanup
+│
 ├── include/
-│   ├── common.h      # Shared structs, enums, defines
+│   ├── common.h
 │   ├── scanner.h
 │   ├── input.h
 │   ├── output.h
 │   └── helper.h
+│
+├── outputs/          # Screenshots / generated reports
 └── Makefile
 ```
 
@@ -96,42 +167,97 @@ C/
 
 ### Why Sequential Scanning Is Slow
 
-The naive approach scans one port at a time:
+A naive scanner checks one port at a time:
 
-```
+```text
 connect(port 1) → wait 1s → result
 connect(port 2) → wait 1s → result
 ...
 connect(port 1024) → wait 1s → result
 ```
 
-Scanning 1024 ports with a 1 second timeout = **~17 minutes** per target. Every port blocks the thread until the connection succeeds or times out.
+Scanning 1024 ports with a 1-second timeout can take roughly:
 
-### CRecon's Approach — Non-blocking + `select()`
-
-CRecon uses non-blocking sockets and `select()` to scan all ports simultaneously:
-
-```
-Create 1024 non-blocking sockets
-connect() all at once → returns immediately (EINPROGRESS)
-select() waits up to 1s for ANY socket to be ready
-Check each ready socket → classify result
-Total time: ~1 second regardless of port count
+```text
+1024 seconds ≈ 17 minutes
 ```
 
-**Step by step:**
+Every connection blocks execution until success or timeout.
 
-1. `fcntl(sockfd, F_SETFL, O_NONBLOCK)` — makes socket non-blocking
-2. `connect()` returns immediately with `EINPROGRESS` instead of blocking
-3. `select()` on `writefds` — sleeps until one or more connections complete
-4. `getsockopt(SO_ERROR)` — checks if connection succeeded or failed
-5. Classify:
-   - `SO_ERROR == 0` → `OPEN`
-   - `SO_ERROR == ECONNREFUSED` → `CLOSED`
-   - Not ready after timeout → `FILTERED`
+---
 
+## CRecon's Approach — Non-blocking + `select()`
+
+CRecon scans all ports simultaneously using non-blocking sockets.
+
+```text
+Create all sockets
+connect() on every port
+select() waits for responses
+Check socket state
+Generate report
 ```
-All ports → non-blocking connect() → select() → getsockopt() → Report
+
+### Internal Workflow
+
+1. Make sockets non-blocking
+
+```c
+fcntl(sockfd, F_SETFL, O_NONBLOCK);
+```
+
+2. Start asynchronous connections
+
+```c
+connect(sockfd, ...);
+```
+
+Returns immediately with:
+
+```text
+EINPROGRESS
+```
+
+3. Monitor sockets with `select()`
+
+```c
+select(maxfd + 1, NULL, &writefds, NULL, &timeout);
+```
+
+4. Determine connection result
+
+```c
+getsockopt(sockfd, SOL_SOCKET, SO_ERROR, ...);
+```
+
+### Port Classification
+
+| Result                | Meaning  |
+| --------------------- | -------- |
+| `SO_ERROR == 0`       | OPEN     |
+| `ECONNREFUSED`        | CLOSED   |
+| Timeout / No response | FILTERED |
+
+---
+
+## Example Scan Flow
+
+```text
+Targets
+   ↓
+DNS Resolution
+   ↓
+Create Non-blocking Sockets
+   ↓
+connect()
+   ↓
+select()
+   ↓
+getsockopt()
+   ↓
+OPEN / CLOSED / FILTERED
+   ↓
+Terminal or HTML Report
 ```
 
 ---
@@ -142,7 +268,7 @@ All ports → non-blocking connect() → select() → getsockopt() → Report
 - [x] Multiple target scanning
 - [x] Custom port ranges via `-p` flag
 - [x] Non-blocking sockets with `select()`
-- [ ] HTML report output via `-o` flag
+- [x] HTML report output via `-o` flag
 - [ ] Multithreaded scanning (thread pool)
 - [ ] Banner grabbing (service detection)
 - [ ] UDP scan support
@@ -152,23 +278,33 @@ All ports → non-blocking connect() → select() → getsockopt() → Report
 
 ## Legal Disclaimer
 
-> This tool is intended for **educational purposes** and **authorized penetration testing only**.
-> Scanning systems without explicit permission is **illegal** and unethical.
-> Always obtain written permission before scanning any network or system you do not own.
+> This project is intended strictly for educational purposes and authorized security testing.
+>
+> Unauthorized scanning of networks or systems without explicit permission may violate laws and regulations.
+>
+> Always obtain proper authorization before performing any security assessment.
 
 ---
 
 ## Author
 
-**Kshitij** — Built as a learning project while diving deep into cybersecurity, network programming, and C systems development.
+**Kshitij**
 
-> _"To understand security tools, you must build them yourself."_
+Built while learning:
+
+- Cybersecurity
+- TCP/IP networking
+- Linux systems programming
+- Non-blocking socket architectures
+- Reconnaissance tooling
+
+> _"To truly understand security tools, build them yourself."_
 
 ---
 
 ## Learning Resources
 
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
-- [Nmap — The Art of Port Scanning](https://nmap.org/book/toc.html)
+- [Nmap Network Scanning](https://nmap.org/book/)
 - [TCP/IP Illustrated — W. Richard Stevens](https://www.amazon.com/TCP-Illustrated-Protocols-Addison-Wesley-Professional/dp/0321336313)
 - [The Linux Programming Interface](https://man7.org/tlpi/)

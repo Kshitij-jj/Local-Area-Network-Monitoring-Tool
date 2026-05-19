@@ -1,14 +1,27 @@
 #include "input.h"
 #include "helper.h"
-
+char get_format(int argc, char *argv[]){
+	int p_idx = find_flag(argc, argv, "-o");
+	if(p_idx == -1) return DEFAULT_FORMAT;
+	else return argv[p_idx+1][0];
+}
 Target *get_targets(int argc, char *argv[], int *target_count) {
     PortRange Port;
     int p_idx = find_flag(argc, argv, "-p");
-
-    if (p_idx != -1) {
+    int o_idx = find_flag(argc, argv, "-o");
+    if (p_idx != -1 && o_idx == -1) {
         *target_count = p_idx - 1;
         Port = get_ports(p_idx, argv);
-    } else {
+    }else if(p_idx !=-1 && o_idx !=-1){
+        *target_count = (p_idx < o_idx)? p_idx - 1: o_idx - 1;
+        Port = get_ports(p_idx, argv);
+    }
+    else if(p_idx == -1 && o_idx != -1){
+        *target_count = o_idx - 1;
+        Port.ports = NULL;
+        Port.count = MAX_PORT;
+    }
+    else {
         *target_count = argc - 1;
         Port.ports = NULL;
         Port.count = MAX_PORT;
